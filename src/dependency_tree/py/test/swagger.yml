@@ -1,0 +1,112 @@
+openapi: 3.0.0
+info:
+  title: Flask API
+  version: 1.0.0
+paths:
+  /encodeSentence:
+    post:
+      summary: Encode a sentence
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sentence:
+                  type: string
+                  description: Sentence to be encoded
+      responses:
+        '200':
+          description: A JSON object containing the encoded sentence
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  encoded_:
+                    type: array
+                    items:
+                      type: number
+                    description: Encoded sentence as a list of numbers
+        '500':
+          description: Server error
+  /dbInsert:
+    post:
+      summary: Insert record into database
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                docID:
+                  type: string
+                  description: Document ID to be inserted
+      responses:
+        '200':
+          description: A JSON object confirming the insertion
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id_:
+                    type: string
+                    description: Document ID that was inserted
+        '500':
+          description: Server error
+  /dbSearch:
+    post:
+      summary: Search record from database
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                docID:
+                  type: string
+                  description: Document ID to be inserted
+      responses:
+        '200':
+          description: A JSON object confirming the insertion
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id_:
+                    type: string
+                    description: Document ID that was inserted
+        '500':
+          description: Server error
+  /dbUpdate:
+    post:
+      summary: update record from database
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                docID:
+                  type: string
+                  description: Document ID to be inserted
+      responses:
+        '200':
+          description: A JSON object confirming the insertion
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id_:
+                    type: string
+                    description: Document ID that was inserted
+        '500':
+          description: Server error
+

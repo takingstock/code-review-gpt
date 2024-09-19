@@ -2,6 +2,8 @@ from generate_relevant_files import FindRelevantFiles
 from python_extractor import PythonASTExtractor
 from python_swagger_extract_impl_deets import PythonAPIImplementationDetails
 
+import json
+
 def check_imports( pr_fnm_, pr_method_nm_, py_data_, local_consumers_, global_consumers_ ):
     
     for _key_, line_details_ in py_data_.items():
@@ -19,7 +21,6 @@ def check_imports( pr_fnm_, pr_method_nm_, py_data_, local_consumers_, global_co
 
             elif 'RHS' in line_items_ and pr_method_nm_ in line_items_['RHS'] and\
                     curr_fnm_ != pr_fnm_: ## global usage of the method
-                        print( line_items_ )
                         global_consumers_[ curr_fnm_+ line_items_['RHS'] ] = \
                                 ( {'file': curr_fnm_, 'calling_line': line_items_['RHS'],\
                                                   'enclosing_method': line_items_['Enclosing_Method'] } )
@@ -108,19 +109,38 @@ def generate_py_dependencies( pr_fnm_, pr_method_nm_ ):
 
     ## iterate through all py files and check if the pr_method_nm_ is being invoked in any other file
     ## this should cover cases of package imports
-    print( py_data_ )
-    print( py_api_data_ )
     check_imports( pr_fnm_, pr_method_nm_, py_data_, local_consumers_, global_consumers_ )
 
     ## check if pr_method_nm_ is actually an API definition and if so , find consumers
     check_api_calls( pr_fnm_, pr_method_nm_, py_data_, py_api_data_, file_list_, local_consumers_, global_consumers_ )
 
-    print('Local Consumers=>', local_consumers_)
-    print('Global Consumers=>', global_consumers_)
+    return local_consumers_, global_consumers_
+
+def generateDownstreamUsages(json_path):
+
+    with open( json_path, 'r' ) as fp:
+        js_ = json.load( fp )
+
+    finalResp_ = dict()
+
+    try:
+      if 'py' in js_:
+        py_arr_ = js_['py']
+
+        for rec_ in py_arr_:
+            local_, global_ = generate_py_dependencies( rec_['changed_file'], rec_['method_nm'] )
+
+            finalResp_.update( local_ )
+            finalResp_.update( global_ )
+
+    except:
+        print('generateDownstreamUsages => py failure', traceback.format_exc())
+
+    return finalResp_
 
 if __name__ == "__main__":
 
-    import time
-    start_ = time.time()
-    generate_py_dependencies( pr_fnm_='./test/findKeys.py', pr_method_nm_='processNeighbours' )
-    print('Time taken=>', time.time() - start_)
+    import time, sys, os
+    js_ = generateDownstreamUsages( os.getenv('ROOT_CHANGES_JSON') )
+    with open( os.getenv('PY_DOWNSTREAM_USAGE'), 'w' ) as fp:
+        json.dump( js_, fp, indent=2 )

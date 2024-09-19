@@ -149,7 +149,6 @@ function parseUsage(filePath) {
           usages: [] // We will populate this later with all usages
         };
 
-        console.log(`Captured import: ${importedVariableName} = require(${requiredPath})`);
       }
     }
   });
@@ -170,7 +169,6 @@ function parseUsage(filePath) {
             line,
             context: usageContext
           });
-          console.log(`Found usage of ${importedVariableName} on line ${line}: ${usageContext}`);
  
 	}
       }
@@ -223,12 +221,7 @@ function traverseAndParseJSFiles(dir) {
   return [allFileDetails, usageDetails];
 }
 
-// Directory where your Node.js files are located
-const dirPath = './test/';
-const [allFileDetails, usageDetails]  = traverseAndParseJSFiles(dirPath);
-
 // Output the results
-//console.log(JSON.stringify( usageDetails, null, 2));
 
 function splitAndNormalizeMethodName(methodName) {
   // Split the method name and normalize it by removing any extra characters like `()`, `,`, etc.
@@ -240,7 +233,7 @@ function splitAndNormalizeMethodName(methodName) {
 }
 
 // Function to match file and method name, and return the line number
-function findMethodUsage(fileName, methodName) {
+function findMethodUsage( fileName, methodName, usageDetails ) {
 
   const normalizedFileName = path.basename(fileName, '.js'); // Remove path and .js extension
   const splitMethodName = splitAndNormalizeMethodName(methodName);	
@@ -251,7 +244,6 @@ function findMethodUsage(fileName, methodName) {
 
     // Check if the normalized file name matches the required module
     if (normalizedFileName.includes(requiredModuleFile)) {
-      console.log(`Match found for file: ${fileName} with required module: ${requiredModulePath}`);
 
       // Iterate through usages to find the matching method
       for (const usage of value.usages) {
@@ -259,25 +251,17 @@ function findMethodUsage(fileName, methodName) {
 	const contextWords = splitAndNormalizeMethodName(usage.context);
 
         const foundMatch = splitMethodName.some( element => contextWords[0].includes( element ) );	      
-        console.log('GRAZING->', contextWords, splitMethodName, foundMatch);
 
         //if (usage.context.includes(`${normalizedFileName}.${methodName}`)) {
 	if( foundMatch ) {
-          console.log(`Method ${methodName} found at line ${usage.line}`);
           return [ key, usage.line] ; // Return the line number of the method usage
         }
       }
     }
   }
 
-  console.log(`No matching method found for file: ${fileName} and method: ${methodName}`);
-  return null; // Return null if no match is found
+  return [ null, null ]; // Return null if no match is found
 }
-
-[ file_nm, line_num_ ] = findMethodUsage( '/abc/def/upload.controller.js', 'const createPathDir' )
-console.log('DUM DUM=>', file_nm, line_num_);
-
-//console.log('FIFI=>', allFileDetails );
 
 function findMatchingKey(dataStructure, inputString, inputIndex) {
   // Step 1: Split the input string based on '#'
@@ -300,7 +284,6 @@ function findMatchingKey(dataStructure, inputString, inputIndex) {
           // Step 5: Check if the inputIndex is within the start and end idx
           if (inputIndex >= startIdx && inputIndex <= endIdx) {
             // If a match is found, return the current key (filePath#methodName)
-	    console.log('RED DAWN->', methodName, record); 
             return key;
           }
         }
@@ -312,5 +295,52 @@ function findMatchingKey(dataStructure, inputString, inputIndex) {
   return null;
 }
 
-finalOP_ = findMatchingKey( allFileDetails, file_nm, line_num_);
-console.log('GOJIRA=>', finalOP_)
+// Method to iterate through and extract 'changed_file' and 'method_nm'
+const generateDownstreamUsages = ( jsonFile, allFileDetails, usageDetails ) => {
+
+  const finalResponse = {};	
+  const data = fs.readFileSync( jsonFile, 'utf8');	
+  const jsonData = JSON.parse(data);
+
+  if (jsonData.hasOwnProperty('nodejs')) {  // Check if the 'nodejs' key exists
+    jsonData.nodejs.forEach(record => {
+
+      const changedFile = record.changed_file;
+      const methodName = record.method_nm;
+      [ file_nm, line_num_ ] = findMethodUsage( changedFile, methodName, usageDetails )
+
+      if ( file_nm === null ){
+	      return;
+      }
+
+      finalOP_ = findMatchingKey( allFileDetails, file_nm, line_num_);
+
+      const key = `${changedFile}#${methodName}`;	    
+      // Initialize array if key doesn't exist yet
+      if (!finalResponse[key]) {
+        finalResponse[key] = [];
+      }
+
+      if (finalOP_ !== null) {
+         finalResponse[key].push({ downstream_file: finalOP_.split('#')[0], downstream_method: finalOP_.split('#')[1]} );
+      } else {
+         finalResponse[key].push({ downstream_file: 'No downstream usage', downstream_method: finalOP_.split('#')[1]} );
+      }	      
+
+    });
+  } else {
+    console.log("'nodejs' key not found.");
+  }
+
+  return finalResponse;	
+};
+
+// Directory where your Node.js files are located
+const dirPath = process.env.HOME_DIR;
+const usage_details_ = process.env.NODEJS_DOWNSTREAM_USAGE;
+const changed_files_ = process.env.ROOT_CHANGES_JSON;
+const [allFileDetails, usageDetails]  = traverseAndParseJSFiles(dirPath);
+
+// Call the method with the JSON data
+node_dependency_json_ = generateDownstreamUsages( changed_files_, allFileDetails, usageDetails );
+fs.writeFileSync( usage_details_, JSON.stringify( node_dependency_json_, null, 2 ), 'utf-8' );

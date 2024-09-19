@@ -49,7 +49,6 @@ class PythonAPIImplementationDetails(SwaggerScannerBase):
                             break
 
                     if found_:
-                        print('BB GUN=>', ep, found_api)
 
                         for j in range(i + 1, len(lines)):
                             def_match = self.def_pattern.search(lines[j])

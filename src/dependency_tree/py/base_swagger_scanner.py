@@ -24,7 +24,6 @@ class SwaggerScannerBase:
             for path, methods in swagger_doc['paths'].items():
                 for method, details in methods.items():
                     self.endpoints.append(path)
-                    print(f"Found API endpoint: {method.upper()} {path}")
 
     def find_implementing_methods(self):
         """Abstract method to be implemented in the child classes for language-specific logic."""

@@ -22,7 +22,7 @@ const createServer = (payload, hcb) => {
                 nonTabularFeedback: payload.nonTabularFeedback,
                 healthDocumentBucketing: payload.healthDocumentBucketing || '',
                 documentBucketing: payload.documentBucketing,
-                documentSnipplet: payload.documentSnipplet,
+                documentSnippet: payload.documentSnippet,
                 updateFlags: payload.updateFlags,
                 name: payload.name
             }
